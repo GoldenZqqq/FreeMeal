@@ -9,6 +9,11 @@ const BASE_HEADERS = {
 const LIST_URL = 'https://m.dianping.com/activity/static/pc/ajaxList';
 const DETAIL_URL = 'https://m.dianping.com/bwc/customer/bwcDetailPackage';
 
+// 瞬时网络波动（DNS/连接重置/超时/5xx）会让列表接口偶发失败。
+// 在这里做有限重试吸收抖动，避免单次抖动误发 Bark「监控失败」。
+const RETRY_COUNT = 3;
+const RETRY_DELAY_MS = 1000;
+
 const MODE_NAMES = new Map([
   [1, '聚会'],
   [2, 'V聚会'],
@@ -112,6 +117,28 @@ export class DianpingClient {
   }
 
   async requestText(url, options) {
+    let lastError;
+    for (let attempt = 1; attempt <= RETRY_COUNT; attempt += 1) {
+      try {
+        return await this.requestTextOnce(url, options);
+      } catch (error) {
+        lastError = error;
+        // 网络层错误（undici 的 TypeError，如 fetch failed/DNS/超时）和 5xx/429 视为可重试；
+        // 业务 4xx 重试无意义，直接抛。
+        const retryable = error instanceof HttpError
+          ? error.status >= 500 || error.status === 429
+          : true;
+        if (!retryable || attempt === RETRY_COUNT) {
+          throw error;
+        }
+        this.logger?.warn(`Request attempt ${attempt}/${RETRY_COUNT} failed: ${error.message}; retrying`);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * attempt));
+      }
+    }
+    throw lastError;
+  }
+
+  async requestTextOnce(url, options) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
