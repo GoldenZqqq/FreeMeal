@@ -1,6 +1,7 @@
 .env
 reports/*.csv
 reports/*.json
+reports/*.tmp
 config/local*.json
 *.log
 node_modules/

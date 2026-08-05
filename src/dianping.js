@@ -2,9 +2,12 @@ import { compactText, toNumber } from './utils.js';
 
 const BASE_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 dp/com.dianping.dpscope/11.63.13',
-  Referer: 'https://m.dianping.com/',
+  Referer: 'https://h5.dianping.com/app/app-community-free-meal/detail.html',
   Origin: 'https://m.dianping.com'
 };
+
+const LIST_URL = 'https://m.dianping.com/activity/static/pc/ajaxList';
+const DETAIL_URL = 'https://m.dianping.com/bwc/customer/bwcDetailPackage';
 
 const MODE_NAMES = new Map([
   [1, '聚会'],
@@ -36,10 +39,10 @@ export class DianpingClient {
     for (let page = 1; page <= maxPages; page += 1) {
       this.logger?.info(`Fetching activity list page ${page}/${maxPages} for city ${cityId}`);
       const payload = { cityId, mode: '', page, type: 0 };
-      const body = await this.requestJson('http://m.dianping.com/activity/static/pc/ajaxList', {
+      const body = await this.requestJson(LIST_URL, {
         method: 'POST',
         headers: {
-          ...BASE_HEADERS,
+          ...this.mobileHeaders(),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
@@ -59,42 +62,44 @@ export class DianpingClient {
     return activities;
   }
 
-  async fetchActivityDetail(detailUrl) {
-    if (!detailUrl) {
+  async fetchActivityDetail({ offlineActivityId, cityId }) {
+    if (!offlineActivityId) {
       return {};
     }
-    const html = await this.requestText(detailUrl, {
-      method: 'GET',
-      headers: BASE_HEADERS
+    const form = new URLSearchParams({
+      id: String(offlineActivityId),
+      offlineActivityId: String(offlineActivityId),
+      busiType: '0',
+      env: '0',
+      lat: '',
+      lng: '',
+      cityId: String(cityId),
+      appCityId: String(cityId),
+      uuidSwitch: 'false'
     });
-
-    const quota = pickNumber(html, /活动名额：<\/span>\s*<strong class="col-digit">(\d+)<\/strong>/);
-    const applicants = pickNumber(html, /<strong>(\d+)<\/strong>人报名/);
-    const detail = {
-      activityAddress: pickText(html, /活动地址：<\/span>\s*([^<\n\r]+)/),
-      applyStartTime: pickText(html, /报名时间：<\/span>\s*(\d+月\d+日)/),
-      applyEndTime: pickText(html, /报名时间：<\/span>.*?(\d+月\d+日).*?(\d+月\d+日)/, 2),
-      activityStartTime: pickText(html, /活动时间：<\/span>\s*(\d+月\d+日)/),
-      activityEndTime: pickText(html, /活动时间：<\/span>.*?(\d+月\d+日).*?(\d+月\d+日)/, 2),
-      activityCount: quota,
-      applyCount: applicants,
-      attentionCount: pickNumber(html, /<strong>(\d+)<\/strong>人关注/),
-      passCount: pickText(html, /支持pass卡（剩余(\d+)个）/) || '不支持',
-      applied: /已报名|已申请|已经报过名|不要重复报名/.test(html),
-      winningRate: applicants > 0 ? Number(((quota / applicants) * 100).toFixed(2)) : 0
-    };
-    if (!detail.activityCount && !detail.applyCount && !detail.activityAddress) {
-      detail.detailError = '详情页未匹配到活动字段，可能是页面结构变化或风控返回';
+    const body = await this.requestJson(DETAIL_URL, {
+      method: 'POST',
+      headers: {
+        ...this.mobileHeaders(),
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      body: form.toString()
+    });
+    if (body?.code !== 200 || !body?.data) {
+      throw new Error(`Unexpected activity detail response for ${offlineActivityId}`);
     }
-    return detail;
+    return normalizeActivityDetail(body.data);
   }
 
   mobileHeaders() {
-    return {
+    const headers = {
       ...BASE_HEADERS,
-      Cookie: this.cookie,
       Accept: 'application/json, text/plain, */*'
     };
+    if (this.cookie) {
+      headers.Cookie = this.cookie;
+    }
+    return headers;
   }
 
   async requestJson(url, options) {
@@ -171,6 +176,25 @@ export function normalizeActivity(activity) {
   };
 }
 
+export function normalizeActivityDetail(detail) {
+  const activityCount = toNumber(detail.joinCount, 0);
+  const applyCount = toNumber(detail.applyCount, 0);
+  return {
+    activityTitle: detail.title || '',
+    applyStartTime: formatTimestamp(detail.applyBeginTime),
+    applyEndTime: formatTimestamp(detail.applyEndTime),
+    activityStartTime: formatTimestamp(detail.beginTime),
+    activityEndTime: formatTimestamp(detail.endTime),
+    activityCount,
+    applyCount,
+    attentionCount: toNumber(detail.followCount, 0),
+    passTotalCount: toNumber(detail.passCount, 0),
+    passRemainingCount: toNumber(detail.leftPassCount, 0),
+    applied: isTruthyFlag(detail.userApplyStatus),
+    winningRate: applyCount > 0 ? Number(((activityCount / applyCount) * 100).toFixed(2)) : 0
+  };
+}
+
 export function shouldApply(activity, filters) {
   const title = activity.activityTitle || '';
   if (filters.includeKeywords.length > 0 && !filters.includeKeywords.some((word) => title.includes(word))) {
@@ -183,6 +207,9 @@ export function shouldApply(activity, filters) {
     return false;
   }
   if (toNumber(activity.winningRate, 0) < filters.minWinningRate) {
+    return false;
+  }
+  if (filters.passOnly && toNumber(activity.passRemainingCount, 0) < filters.minPassRemaining) {
     return false;
   }
   return true;
@@ -202,12 +229,21 @@ function sanitizeUrl(url) {
   }
 }
 
-function pickText(html, regexp, group = 1) {
-  return compactText(html.match(regexp)?.[group] || '', 120);
-}
-
-function pickNumber(html, regexp) {
-  return toNumber(html.match(regexp)?.[1], 0);
+function formatTimestamp(value) {
+  const milliseconds = toNumber(value, 0);
+  if (!milliseconds) {
+    return '';
+  }
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).format(new Date(milliseconds));
 }
 
 function isTruthyFlag(value) {

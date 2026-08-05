@@ -1,16 +1,18 @@
-# FreeMeal
+# FreeMeal PASS Monitor
 
-大众点评霸王餐/免费试活动发现脚本，面向 Arcadia 定时运行。脚本只做“发现 + 筛选 + 通知”，不再自动提交报名，避免普通 Node 环境直接请求 App 报名接口导致 403 或触发风控。
+大众点评霸王餐/免费试 PASS 名额发现脚本。脚本只做“发现 + 筛选 + Bark 通知”，不自动提交报名，点通知可直接打开 iPhone 上的大众点评活动页。
 
 ## 功能
 
 - 拉取指定城市的大众点评免费试活动列表
-- 可按关键词、活动模式和最低中奖率过滤
+- 读取活动的 PASS 总名额和实时剩余名额
+- 默认只提醒 `leftPassCount >= 1` 的新活动
+- 每个匹配活动发送一条 Bark，点击通知直达对应活动
+- 可按关键词、活动模式、最低中奖率和最低 PASS 剩余数过滤
 - 自动排除接口返回的已报名活动，也支持手动排除活动 ID
-- 自动跳过历史报告里已经推送过的活动，避免重复提醒
-- 发现符合条件的活动并统计匹配、跳过
-- 生成 CSV/JSON 报告到 `reports/`
-- 通过 Arcadia 环境变量 `BARK` 发送运行摘要，通知链接优先打开 iPhone 上的大众点评 App
+- Bark 成功后才把活动写入去重状态，推送失败会在下次重试
+- 空结果默认不通知、不生成报告，适合每分钟定时运行
+- 匹配时生成 CSV/JSON 报告到 `reports/`
 
 ## 环境变量
 
@@ -19,7 +21,7 @@
 - `DIANPING_CITY_ID`: 城市 ID，默认福州 `14`
 - `DIANPING_CITY_NAME`: 城市名称，通知中展示
 - `DIANPING_COOKIE`: 登录后的大众点评 Cookie，可选；用于访问详情页时带上账号态
-- `BARK`: Bark key、完整 Bark URL，或 Bark base URL
+- `BARK`: Bark device key 或 `https://api.day.app/<device-key>`；不要提交到仓库
 - `FREEMEAL_CONFIG`: JSON 配置文件路径，默认读取 `config/local.json`
 - `FREEMEAL_MAX_PAGES`: 最多抓取页数
 - `FREEMEAL_MAX_RESULTS`: 最多推送和报告的匹配活动数
@@ -28,6 +30,10 @@
 - `FREEMEAL_EXCLUDE`: 标题排除关键词，逗号分隔
 - `FREEMEAL_MIN_WIN_RATE`: 最低中奖率百分比
 - `FREEMEAL_MODES`: 活动模式，逗号分隔，例如 `聚会,电子券`
+- `FREEMEAL_PASS_ONLY`: 是否只提醒 PASS 有余量的活动，默认 `true`
+- `FREEMEAL_MIN_PASS_REMAINING`: 最低 PASS 剩余名额，默认 `1`
+- `FREEMEAL_NOTIFY_EMPTY`: 无匹配时是否发送 Bark，默认 `false`
+- `FREEMEAL_WRITE_EMPTY_REPORTS`: 无匹配时是否生成报告，默认 `false`
 
 ## 使用
 
@@ -42,6 +48,26 @@ cp config/example.json config/local.json
 ```bash
 node index.js
 ```
+
+## Ubuntu / 香港服务器
+
+香港服务器可以直接运行，不要求中国大陆 IP。先确认 Node.js 版本不低于 18，然后将仓库部署到 `/opt/freemeal-pass`，将环境变量写入仅 root 可读的 `/etc/freemeal-pass.env`。
+
+仓库提供：
+
+- `deploy/freemeal-pass.service`
+- `deploy/freemeal-pass.timer`
+- `deploy/freemeal-pass.env.example`
+
+安装定时器后检查：
+
+```bash
+sudo systemctl enable --now freemeal-pass.timer
+systemctl list-timers freemeal-pass.timer
+journalctl -u freemeal-pass.service -n 100 --no-pager
+```
+
+定时器默认启动 30 秒后首次执行，之后约每 60 秒检查一次。详情接口只对尚未处理的新活动调用，避免反复请求所有活动。
 
 ## Arcadia
 
@@ -67,9 +93,9 @@ node checkin.js
 
 脚本不会在源码、报告或日志里保存 Bark key。Cookie 只从环境变量读取。
 
-Bark 通知正文里的活动链接使用 `dianping://picassobox?...` App 深链；点通知本身会打开本次第一个匹配活动。报告里会同时保存网页链接和 App 链接。
+Bark 通知使用 `dianping://picassobox?...` App 深链；每条通知对应一个活动。报告里会同时保存网页链接和 App 链接。
 
-公开列表接口不总是返回已报名状态，如果某个已报名活动仍被推送，可以把活动链接里的数字 ID 加到 `FREEMEAL_EXCLUDE_IDS`。脚本也会读取 `reports/*.json`，跳过历史上已经匹配推送过的活动。
+公开接口不总是返回登录账号的报名状态。如果某个已报名活动仍被推送，可以把活动链接里的数字 ID 加到 `FREEMEAL_EXCLUDE_IDS`。已处理活动记录在 `reports/seen-activities.json`。
 
 ## 日志
 
@@ -77,4 +103,4 @@ Bark 通知正文里的活动链接使用 `dianping://picassobox?...` App 深链
 
 ## 说明
 
-大众点评接口可能变更，也可能对账号、Cookie、风控或验证码有额外校验。当前脚本只拉取免费试列表、读取可公开访问的详情信息并推送匹配活动，不提交报名请求。报名建议在大众点评 App 内手动完成。
+大众点评接口可能变更，也可能增加风控或验证码。当前脚本只拉取免费试列表、读取可公开访问的详情信息并推送匹配活动，不提交报名请求。建议将检查间隔保持在 60 秒左右，并在大众点评 App 内手动兑换。

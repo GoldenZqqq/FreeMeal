@@ -20,11 +20,21 @@ export async function loadConfig(argv = process.argv.slice(2), env = process.env
     excludeActivityIds: splitList(cli.excludeIds ?? env.FREEMEAL_EXCLUDE_IDS ?? fileConfig.excludeActivityIds),
     reportDir: cli.reportDir || env.FREEMEAL_REPORT_DIR || fileConfig.reportDir || 'reports',
     bark: env.BARK || fileConfig.bark || '',
+    notifyEmpty: toBoolean(cli.notifyEmpty ?? env.FREEMEAL_NOTIFY_EMPTY ?? fileConfig.notifyEmpty, false),
+    writeEmptyReports: toBoolean(
+      cli.writeEmptyReports ?? env.FREEMEAL_WRITE_EMPTY_REPORTS ?? fileConfig.writeEmptyReports,
+      false
+    ),
     filters: {
       includeKeywords: splitList(cli.include ?? env.FREEMEAL_INCLUDE ?? fileConfig.filters?.includeKeywords),
       excludeKeywords: splitList(cli.exclude ?? env.FREEMEAL_EXCLUDE ?? fileConfig.filters?.excludeKeywords),
       minWinningRate: toNumber(cli.minWinningRate ?? env.FREEMEAL_MIN_WIN_RATE ?? fileConfig.filters?.minWinningRate, 0),
-      modes: splitList(cli.modes ?? env.FREEMEAL_MODES ?? fileConfig.filters?.modes)
+      modes: splitList(cli.modes ?? env.FREEMEAL_MODES ?? fileConfig.filters?.modes),
+      passOnly: toBoolean(cli.passOnly ?? env.FREEMEAL_PASS_ONLY ?? fileConfig.filters?.passOnly, true),
+      minPassRemaining: nonNegativeInteger(
+        cli.minPassRemaining ?? env.FREEMEAL_MIN_PASS_REMAINING ?? fileConfig.filters?.minPassRemaining,
+        1
+      )
     }
   };
 
@@ -39,8 +49,9 @@ function parseArgs(argv) {
       continue;
     }
     const [rawKey, inlineValue] = arg.slice(2).split('=', 2);
-    const value = inlineValue ?? argv[index + 1];
-    if (inlineValue === undefined) {
+    const nextValue = argv[index + 1];
+    const value = inlineValue ?? (nextValue?.startsWith('--') ? true : nextValue ?? true);
+    if (inlineValue === undefined && value === nextValue) {
       index += 1;
     }
     const key = rawKey.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
@@ -61,4 +72,23 @@ async function readJsonIfExists(path) {
 function positiveInteger(value, fallback) {
   const number = Number.parseInt(value, 10);
   return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function nonNegativeInteger(value, fallback) {
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) && number >= 0 ? number : fallback;
+}
+
+function toBoolean(value, fallback) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+  return fallback;
 }

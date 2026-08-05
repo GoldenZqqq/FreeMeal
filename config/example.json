@@ -3,11 +3,15 @@
   "cityName": "福州",
   "maxPages": 3,
   "maxResults": 20,
+  "notifyEmpty": false,
+  "writeEmptyReports": false,
   "excludeActivityIds": [],
   "filters": {
     "includeKeywords": [],
     "excludeKeywords": [],
     "minWinningRate": 0,
-    "modes": []
+    "modes": [],
+    "passOnly": true,
+    "minPassRemaining": 1
   }
 }

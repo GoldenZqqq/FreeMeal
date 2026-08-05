@@ -1,0 +1,20 @@
+[Unit]
+Description=Dianping PASS availability monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+WorkingDirectory=/opt/freemeal-pass
+ExecStart=/usr/bin/node /opt/freemeal-pass/index.js
+EnvironmentFile=/etc/freemeal-pass.env
+Environment=FREEMEAL_REPORT_DIR=/var/lib/freemeal-pass
+StateDirectory=freemeal-pass
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

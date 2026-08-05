@@ -19,7 +19,8 @@ const COLUMNS = [
   ['活动开始时间', 'activityStartTime'],
   ['活动结束时间', 'activityEndTime'],
   ['活动地址', 'activityAddress'],
-  ['剩余PASS次数', 'passCount'],
+  ['PASS总名额', 'passTotalCount'],
+  ['PASS剩余名额', 'passRemainingCount'],
   ['详情错误', 'detailError'],
   ['发现状态', 'discoveryStatus'],
   ['发现结果', 'discoveryMessage']

@@ -6,7 +6,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check checkin.js && node --check src/index.js && node --check src/config.js && node --check src/dianping.js && node --check src/history.js && node --check src/notifier.js && node --check src/report.js && node --check src/utils.js"
+    "check": "node --check index.js && node --check checkin.js && node --check src/index.js && node --check src/config.js && node --check src/dianping.js && node --check src/history.js && node --check src/notifier.js && node --check src/report.js && node --check src/utils.js",
+    "test": "node --test"
   },
   "keywords": [
     "dianping",
