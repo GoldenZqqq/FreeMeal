@@ -1,5 +1,5 @@
 [Unit]
-Description=Dianping PASS availability monitor
+Description=Dianping free-trial activity monitor
 After=network-online.target
 Wants=network-online.target
 

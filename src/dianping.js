@@ -176,9 +176,11 @@ export function normalizeActivity(activity) {
   };
 }
 
-export function normalizeActivityDetail(detail) {
+export function normalizeActivityDetail(detail, now = Date.now()) {
   const activityCount = toNumber(detail.joinCount, 0);
   const applyCount = toNumber(detail.applyCount, 0);
+  const applyBeginTimeMs = toNumber(detail.applyBeginTime, 0);
+  const applyEndTimeMs = toNumber(detail.applyEndTime, 0);
   return {
     activityTitle: detail.title || '',
     applyStartTime: formatTimestamp(detail.applyBeginTime),
@@ -190,6 +192,8 @@ export function normalizeActivityDetail(detail) {
     attentionCount: toNumber(detail.followCount, 0),
     passTotalCount: toNumber(detail.passCount, 0),
     passRemainingCount: toNumber(detail.leftPassCount, 0),
+    registrationOpen: isRegistrationOpen(applyBeginTimeMs, applyEndTimeMs, now),
+    activityAbnormal: Boolean(detail.activityAbnormal),
     applied: isTruthyFlag(detail.userApplyStatus),
     winningRate: applyCount > 0 ? Number(((activityCount / applyCount) * 100).toFixed(2)) : 0
   };
@@ -209,10 +213,19 @@ export function shouldApply(activity, filters) {
   if (toNumber(activity.winningRate, 0) < filters.minWinningRate) {
     return false;
   }
+  if (filters.registrationOpenOnly && (!activity.registrationOpen || activity.activityAbnormal)) {
+    return false;
+  }
   if (filters.passOnly && toNumber(activity.passRemainingCount, 0) < filters.minPassRemaining) {
     return false;
   }
   return true;
+}
+
+function isRegistrationOpen(beginTime, endTime, now) {
+  const afterStart = !beginTime || beginTime <= now;
+  const beforeEnd = !endTime || now <= endTime;
+  return afterStart && beforeEnd;
 }
 
 function sanitizeUrl(url) {

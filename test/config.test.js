@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadConfig } from '../src/config.js';
 
-test('PASS-only monitoring is enabled by default', async () => {
+test('open-registration monitoring and first-run baseline are enabled by default', async () => {
   const config = await loadConfig(['--config', 'missing-test-config.json'], {});
-  assert.equal(config.filters.passOnly, true);
+  assert.equal(config.filters.registrationOpenOnly, true);
+  assert.equal(config.filters.passOnly, false);
   assert.equal(config.filters.minPassRemaining, 1);
+  assert.equal(config.baselineOnFirstRun, true);
   assert.equal(config.notifyEmpty, false);
   assert.equal(config.writeEmptyReports, false);
 });

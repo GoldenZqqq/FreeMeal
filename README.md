@@ -1,14 +1,15 @@
-# FreeMeal PASS Monitor
+# FreeMeal Activity Monitor
 
-大众点评霸王餐/免费试 PASS 名额发现脚本。脚本只做“发现 + 筛选 + Bark 通知”，不自动提交报名，点通知可直接打开 iPhone 上的大众点评活动页。
+大众点评霸王餐/免费试可报名活动上新监控。脚本只做“发现 + 筛选 + Bark 通知”，不自动提交报名，点通知可直接打开 iPhone 上的大众点评活动页。
 
 ## 功能
 
 - 拉取指定城市的大众点评免费试活动列表
-- 读取活动的 PASS 总名额和实时剩余名额
-- 默认只提醒 `leftPassCount >= 1` 的新活动
+- 默认提醒所有新出现且仍在报名时间窗口内的活动
+- 首次运行只建立当前活动基线，避免一次性推送历史活动
+- 读取 PASS 总名额和剩余名额，作为可选通知信息
 - 每个匹配活动发送一条 Bark，点击通知直达对应活动
-- 可按关键词、活动模式、最低中奖率和最低 PASS 剩余数过滤
+- 可按关键词、活动模式、最低中奖率和 PASS 剩余数过滤
 - 自动排除接口返回的已报名活动，也支持手动排除活动 ID
 - Bark 成功后才把活动写入去重状态，推送失败会在下次重试
 - 空结果默认不通知、不生成报告，适合每分钟定时运行
@@ -30,8 +31,10 @@
 - `FREEMEAL_EXCLUDE`: 标题排除关键词，逗号分隔
 - `FREEMEAL_MIN_WIN_RATE`: 最低中奖率百分比
 - `FREEMEAL_MODES`: 活动模式，逗号分隔，例如 `聚会,电子券`
-- `FREEMEAL_PASS_ONLY`: 是否只提醒 PASS 有余量的活动，默认 `true`
+- `FREEMEAL_REGISTRATION_OPEN_ONLY`: 是否只提醒正在报名的活动，默认 `true`
+- `FREEMEAL_PASS_ONLY`: 是否只提醒 PASS 有余量的活动，默认 `false`
 - `FREEMEAL_MIN_PASS_REMAINING`: 最低 PASS 剩余名额，默认 `1`
+- `FREEMEAL_BASELINE_ON_FIRST_RUN`: 首次运行是否仅建立基线，默认 `true`
 - `FREEMEAL_NOTIFY_EMPTY`: 无匹配时是否发送 Bark，默认 `false`
 - `FREEMEAL_WRITE_EMPTY_REPORTS`: 无匹配时是否生成报告，默认 `false`
 
@@ -67,7 +70,7 @@ systemctl list-timers freemeal-pass.timer
 journalctl -u freemeal-pass.service -n 100 --no-pager
 ```
 
-定时器默认启动 30 秒后首次执行，之后约每 60 秒检查一次。详情接口只对尚未处理的新活动调用，避免反复请求所有活动。
+定时器默认启动 30 秒后首次执行，之后约每 60 秒检查一次。详情接口只对尚未处理的新活动调用，避免反复请求所有活动。该项目不依赖青龙，建议直接作为独立 `systemd` 服务运行。
 
 ## Arcadia
 

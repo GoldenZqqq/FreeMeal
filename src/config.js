@@ -21,6 +21,10 @@ export async function loadConfig(argv = process.argv.slice(2), env = process.env
     reportDir: cli.reportDir || env.FREEMEAL_REPORT_DIR || fileConfig.reportDir || 'reports',
     bark: env.BARK || fileConfig.bark || '',
     notifyEmpty: toBoolean(cli.notifyEmpty ?? env.FREEMEAL_NOTIFY_EMPTY ?? fileConfig.notifyEmpty, false),
+    baselineOnFirstRun: toBoolean(
+      cli.baselineOnFirstRun ?? env.FREEMEAL_BASELINE_ON_FIRST_RUN ?? fileConfig.baselineOnFirstRun,
+      true
+    ),
     writeEmptyReports: toBoolean(
       cli.writeEmptyReports ?? env.FREEMEAL_WRITE_EMPTY_REPORTS ?? fileConfig.writeEmptyReports,
       false
@@ -30,7 +34,11 @@ export async function loadConfig(argv = process.argv.slice(2), env = process.env
       excludeKeywords: splitList(cli.exclude ?? env.FREEMEAL_EXCLUDE ?? fileConfig.filters?.excludeKeywords),
       minWinningRate: toNumber(cli.minWinningRate ?? env.FREEMEAL_MIN_WIN_RATE ?? fileConfig.filters?.minWinningRate, 0),
       modes: splitList(cli.modes ?? env.FREEMEAL_MODES ?? fileConfig.filters?.modes),
-      passOnly: toBoolean(cli.passOnly ?? env.FREEMEAL_PASS_ONLY ?? fileConfig.filters?.passOnly, true),
+      registrationOpenOnly: toBoolean(
+        cli.registrationOpenOnly ?? env.FREEMEAL_REGISTRATION_OPEN_ONLY ?? fileConfig.filters?.registrationOpenOnly,
+        true
+      ),
+      passOnly: toBoolean(cli.passOnly ?? env.FREEMEAL_PASS_ONLY ?? fileConfig.filters?.passOnly, false),
       minPassRemaining: nonNegativeInteger(
         cli.minPassRemaining ?? env.FREEMEAL_MIN_PASS_REMAINING ?? fileConfig.filters?.minPassRemaining,
         1

@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { activityIdFromUrl } from './dianping.js';
 import { compactText } from './utils.js';
@@ -15,6 +15,18 @@ export async function loadSeenActivityIds(reportDir, logger = null) {
   }
 
   return loadLegacyReportIds(reportDir, logger);
+}
+
+export async function notificationStateExists(reportDir) {
+  try {
+    await access(join(reportDir, 'seen-activities.json'));
+    return true;
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return false;
+    }
+    throw error;
+  }
 }
 
 export async function saveSeenActivityIds(reportDir, activityIds) {

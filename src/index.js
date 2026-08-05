@@ -1,6 +1,6 @@
 import { loadConfig } from './config.js';
 import { DianpingClient, shouldApply } from './dianping.js';
-import { loadSeenActivityIds, saveSeenActivityIds } from './history.js';
+import { loadSeenActivityIds, notificationStateExists, saveSeenActivityIds } from './history.js';
 import { notifyBark } from './notifier.js';
 import { writeReports } from './report.js';
 import { compactText, createLogger } from './utils.js';
@@ -13,8 +13,8 @@ async function main() {
   const client = new DianpingClient({ cookie: config.cookie, logger });
   logConfig(config);
 
+  const hasState = await notificationStateExists(config.reportDir);
   const seenActivityIds = await loadSeenActivityIds(config.reportDir, logger);
-  await saveSeenActivityIds(config.reportDir, seenActivityIds);
   logger.info(`Loaded ${seenActivityIds.size} previously processed activities`);
 
   const list = await client.fetchActivities({
@@ -22,6 +22,12 @@ async function main() {
     maxPages: config.maxPages
   });
   logger.info(`Fetched ${list.length} activities`);
+
+  if (!hasState && seenActivityIds.size === 0 && config.baselineOnFirstRun) {
+    await initializeBaseline(config, list);
+    logger.info('Script finished after first-run baseline');
+    return;
+  }
 
   const scan = await scanActivities({ client, config, list, seenActivityIds });
   const notification = await notifyMatches(config, scan.records, scan.processedIds);
@@ -43,9 +49,17 @@ function logConfig(config) {
     `maxResults=${config.maxResults}`,
     `passOnly=${config.filters.passOnly}`,
     `minPassRemaining=${config.filters.minPassRemaining}`,
+    `registrationOpenOnly=${config.filters.registrationOpenOnly}`,
+    `baselineOnFirstRun=${config.baselineOnFirstRun}`,
     `cookie=${config.cookie ? 'configured' : 'missing'}`,
     `bark=${config.bark ? 'configured' : 'missing'}`
   ].join(', '));
+}
+
+async function initializeBaseline(config, list) {
+  const activityIds = new Set(list.map((activity) => String(activity.offlineActivityId)).filter(Boolean));
+  await saveSeenActivityIds(config.reportDir, activityIds);
+  logger.info(`First-run baseline saved ${activityIds.size} current activities without notification`);
 }
 
 async function scanActivities({ client, config, list, seenActivityIds }) {
@@ -187,11 +201,11 @@ async function notifyMatches(config, records, processedIds) {
 }
 
 function buildActivityNotification(config, record) {
-  const title = `PASS剩余${record.passRemainingCount}个｜${compactText(record.activityTitle, 32)}`;
+  const title = `免费试上新｜${compactText(record.activityTitle, 36)}`;
   const lines = [
     `城市：${config.cityName || config.cityId}`,
     record.regionName ? `商圈：${record.regionName}` : '',
-    `PASS：剩余 ${record.passRemainingCount} / 共 ${record.passTotalCount}`,
+    record.passTotalCount ? `PASS：剩余 ${record.passRemainingCount} / 共 ${record.passTotalCount}` : '',
     record.applyEndTime ? `报名截止：${record.applyEndTime}` : '',
     record.applyCount ? `当前报名：${record.applyCount} 人` : '',
     '点击通知直接打开大众点评活动页'
@@ -226,8 +240,8 @@ async function notifyEmptyResult(config, summary) {
   try {
     await notifyBark({
       bark: config.bark,
-      title: '大众点评 PASS 暂无上新',
-      body: `城市：${summary.city}\n活动：${summary.total}，本次没有新的 PASS 名额`
+      title: '大众点评免费试暂无上新',
+      body: `城市：${summary.city}\n活动：${summary.total}，本次没有新的可报名活动`
     });
   } catch (error) {
     logger.error(`Empty-result Bark notification failed: ${error.message}`);
@@ -236,7 +250,8 @@ async function notifyEmptyResult(config, summary) {
 
 function buildMatchMessage(record) {
   const parts = [
-    `PASS剩余 ${record.passRemainingCount}/${record.passTotalCount}`,
+    '报名中',
+    record.passTotalCount ? `PASS剩余 ${record.passRemainingCount}/${record.passTotalCount}` : '',
     record.winningRate ? `中奖率 ${record.winningRate}%` : '',
     record.applyCount ? `报名 ${record.applyCount}` : '',
     record.activityCount ? `活动名额 ${record.activityCount}` : '',
@@ -251,7 +266,7 @@ main().catch(async (error) => {
     const config = await loadConfig([]);
     await notifyBark({
       bark: config.bark,
-      title: '大众点评 PASS 监控失败',
+      title: '大众点评免费试监控失败',
       body: error.message
     });
   } catch {

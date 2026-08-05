@@ -4,6 +4,7 @@
   "maxPages": 3,
   "maxResults": 20,
   "notifyEmpty": false,
+  "baselineOnFirstRun": true,
   "writeEmptyReports": false,
   "excludeActivityIds": [],
   "filters": {
@@ -11,7 +12,8 @@
     "excludeKeywords": [],
     "minWinningRate": 0,
     "modes": [],
-    "passOnly": true,
+    "registrationOpenOnly": true,
+    "passOnly": false,
     "minPassRemaining": 1
   }
 }
