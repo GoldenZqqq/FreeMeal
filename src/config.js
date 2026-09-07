@@ -20,6 +20,7 @@ export async function loadConfig(argv = process.argv.slice(2), env = process.env
     excludeActivityIds: splitList(cli.excludeIds ?? env.FREEMEAL_EXCLUDE_IDS ?? fileConfig.excludeActivityIds),
     reportDir: cli.reportDir || env.FREEMEAL_REPORT_DIR || fileConfig.reportDir || 'reports',
     bark: env.BARK || fileConfig.bark || '',
+    barkDebounceMs: nonNegativeInteger(cli.barkDebounceMs ?? env.FREEMEAL_BARK_DEBOUNCE_MS ?? fileConfig.barkDebounceMs, 120000),
     notifyEmpty: toBoolean(cli.notifyEmpty ?? env.FREEMEAL_NOTIFY_EMPTY ?? fileConfig.notifyEmpty, false),
     baselineOnFirstRun: toBoolean(
       cli.baselineOnFirstRun ?? env.FREEMEAL_BASELINE_ON_FIRST_RUN ?? fileConfig.baselineOnFirstRun,

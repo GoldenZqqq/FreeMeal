@@ -36,6 +36,7 @@
 - `FREEMEAL_MIN_PASS_REMAINING`: 最低 PASS 剩余名额，默认 `1`
 - `FREEMEAL_BASELINE_ON_FIRST_RUN`: 首次运行是否仅建立基线，默认 `true`
 - `FREEMEAL_NOTIFY_EMPTY`: 无匹配时是否发送 Bark，默认 `false`
+- `FREEMEAL_BARK_DEBOUNCE_MS`: Bark 防抖窗口毫秒，默认 `120000`（2 分钟）; 窗口内多条上新合并为一条推送，不重复轰炸。
 - `FREEMEAL_WRITE_EMPTY_REPORTS`: 无匹配时是否生成报告，默认 `false`
 
 ## 使用

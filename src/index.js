@@ -1,6 +1,6 @@
 import { loadConfig } from './config.js';
 import { DianpingClient, shouldApply } from './dianping.js';
-import { loadSeenActivityIds, notificationStateExists, saveSeenActivityIds } from './history.js';
+import { loadSeenActivityIds, notificationStateExists, saveSeenActivityIds, loadLastBarkAt, saveLastBarkAt } from './history.js';
 import { notifyBark } from './notifier.js';
 import { writeReports } from './report.js';
 import { compactText, createLogger } from './utils.js';
@@ -177,46 +177,57 @@ async function safeFetchDetail(client, activity, cityId) {
 }
 
 async function notifyMatches(config, records, processedIds) {
-  const result = { notified: 0, failed: 0 };
+  const result = { notified: 0, failed: 0, throttled: 0 };
   const matchedRecords = records.filter((record) => record.discoveryStatus === 'matched');
-  for (const record of matchedRecords) {
-    const notification = buildActivityNotification(config, record);
-    try {
-      const response = await notifyBark({ bark: config.bark, ...notification });
-      if (response.skipped) {
-        throw new Error(response.reason);
-      }
-      record.discoveryStatus = 'notified';
-      processedIds.add(String(record.offlineActivityId));
-      result.notified += 1;
-      logger.info(`Bark notified: ${compactText(record.activityTitle, 60)}`);
-    } catch (error) {
-      record.discoveryStatus = 'notification_failed';
-      record.discoveryMessage = `${record.discoveryMessage}；Bark失败：${error.message}`;
-      result.failed += 1;
-      logger.error(`Bark failed for ${record.offlineActivityId}: ${error.message}`);
+  if (!matchedRecords.length) return result;
+
+  const now = Date.now();
+  const lastBarkAt = await loadLastBarkAt(config.reportDir, logger);
+  const withinWindow = lastBarkAt > 0 && (now - lastBarkAt) < config.barkDebounceMs;
+
+  if (withinWindow) {
+    for (const record of matchedRecords) {
+      processMatched(record, processedIds, "Bark 节流窗口内，已合并静默");
     }
+    result.throttled += matchedRecords.length;
+    logger.info(`Bark throttled: ${matchedRecords.length} 个新活动已在 ${Math.round((now - lastBarkAt) / 1000)}s 内合并，不重复推送`);
+    return result;
+  }
+
+  const notification = buildNewArrivalNotification(config, matchedRecords.length);
+  try {
+    const response = await notifyBark({ bark: config.bark, ...notification });
+    if (response.skipped) {
+      logger.info("Bark skipped: " + response.reason);
+      for (const record of matchedRecords) processMatched(record, processedIds, "Bark 未配置或跳过，已去重");
+      return result;
+    }
+    await saveLastBarkAt(config.reportDir, now, logger);
+    for (const record of matchedRecords) {
+      processMatched(record, processedIds, "Bark 已发合并通知");
+    }
+    result.notified += matchedRecords.length;
+    logger.info("Bark sent consolidated new-arrival notification for " + matchedRecords.length + " activities");
+  } catch (error) {
+    result.failed += 1;
+    logger.error("Bark failed: " + error.message);
   }
   return result;
 }
-
-function buildActivityNotification(config, record) {
-  const title = `免费试上新｜${compactText(record.activityTitle, 36)}`;
-  const lines = [
-    `城市：${config.cityName || config.cityId}`,
-    record.regionName ? `商圈：${record.regionName}` : '',
-    record.passTotalCount ? `PASS：剩余 ${record.passRemainingCount} / 共 ${record.passTotalCount}` : '',
-    record.applyEndTime ? `报名截止：${record.applyEndTime}` : '',
-    record.applyCount ? `当前报名：${record.applyCount} 人` : '',
-    '点击通知直接打开大众点评活动页'
-  ];
-  return {
-    title,
-    body: lines.filter(Boolean).join('\n'),
-    url: record.appDetailUrl || record.detailUrl || ''
-  };
+function processMatched(record, processedIds, message) {
+  record.discoveryStatus = "notified";
+  record.discoveryMessage = message;
+  processedIds.add(String(record.offlineActivityId));
 }
 
+function buildNewArrivalNotification(config, count) {
+  return {
+    title: '免费试上新提醒',
+    body: `${config.cityName || config.cityId} 有 ${count} 个新活动上新`,
+
+    url: '',
+  };
+}
 async function finishRun(config, scan) {
   const { summary, records } = scan;
   logger.info([
@@ -274,3 +285,4 @@ main().catch(async (error) => {
   }
   process.exitCode = 1;
 });
+
