@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>免费试 PASS 定制面板</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --line: #e6e8f0;
+    --text: #22242a;
+    --muted: #74778a;
+    --accent: #ff6633;
+    --green: #12b76a;
+    --red: #e5484d;
+    --blue: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin:  0;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    position: sticky;
+    top:  0;
+    z-index:  20;
+    background: linear-gradient(135deg,#ff6633,#ff9a3c);
+    color: #fff;
+    padding: 10px 14px 12px;
+    box-shadow: 0 2px 10px rgba(255,102,51,.25);
+  }
+  header h1 { margin:  0; font-size: 18px; letter-spacing: .5px; }
+  header .meta { font-size: 12px; opacity: .95; margin-top: 4px; }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap:  8px;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .toolbar button, .toolbar select, .toolbar input {
+    border: 1px solid rgba(255,255,255,.5);
+    background: rgba(255,255,255,.16);
+    color: #fff;
+    border-radius: 8px;
+    padding: 5px 9px;
+    font-size: 12px;
+    outline: none;
+  }
+  .toolbar input::placeholder { color: rgba(255,255,255,.75); }
+  .toolbar button:active { transform: scale(.96); }
+  main { max-width: 1100px; margin: 0 auto; padding: 12px; }
+  #banner {
+    background: #fff7e6;
+    border: 1px solid #ffd591;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #a45c00;
+  }
+  .filters {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    display: grid;
+    gap: 10px;
+  }
+  .filter-row { display: flex; flex-wrap: wrap; gap:  8px; align-items: center; }
+  .filter-row label { font-size: 12px; color: var(--muted); }
+  .filter-row input[type="text"], .filter-row input[type="number"], .filter-row select {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 13px;
+    background: #fff;
+    color: var(--text);
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap:  4px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    background: #fbfbfd;
+    color: var(--muted);
+    user-select: none;
+  }
+  .chip.on { background: #fff0ea; border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .chip .cnt { opacity: .7; font-size: 11px; }
+  .quick { color: var(--blue); font-size: 12px; cursor: pointer; border-bottom: 1px dashed var(--blue); }
+  .toggle-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font-size: 13px; }
+  .toggle-row label { display: inline-flex; align-items: center; gap:  4px; color: var(--text); }
+  #status { font-size: 12px; color: var(--muted); margin-bottom: 8px; min-height: 18px; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); gap: 10px; }
+  .card {
+    background: var(--card);
+    border:  1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: box-shadow .15s;
+  }
+  .card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+  .card.urgent { border-color: var(--red); box-shadow: 0 0 0 2px rgba(229,72,77,.12); }
+  .card.applied { opacity: .68; }
+  .card.applied::after {
+    content: "已报名";
+    position: absolute;
+    top:  8px;
+    right: -28px;
+    transform: rotate(45deg);
+    background: var(--muted);
+    color: #fff;
+    font-size: 11px;
+    padding: 3px 30px;
+    pointer-events: none;
+  }
+  .pic { height: 140px; background: #eceef4; }
+  .pic img { width: 100%; height:  100%; object-fit: cover; display: block; }
+  .body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap:  6px; flex: 1; }
+  .title { font-size: 14px; font-weight: 600; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow:hidden; }
+  .badges { display: flex; flex-wrap: wrap; gap:  4px; }
+  .badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: #f1f2f7; color: var(--muted); }
+  .badge.type { background:#fff0ea; color: var(--accent); }
+  .pass-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+  .pass-row b { color: var(--accent); font-size: 15px; }
+  .bar { height: 6px; background: #eef0f6; border-radius: 999px; overflow:hidden; }
+  .bar i { display:block; height:100%; background: linear-gradient(90deg,#ff9a3c,#ff6633); border-radius: 999px; }
+  .stats { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .times { font-size:  11px; color: var(--muted); }
+  .actions { display: flex; gap:  6px; margin-top:auto; padding-top: 6px; }
+  .actions a {
+    flex: 1;
+    text-align: center;
+    text-decoration: none;
+    font-size:  12px;
+    padding: 6px 4px;
+    border-radius: 8px;
+  }
+  .actions .app { background: var(--accent); color: #fff; }
+  .actions .web { background: #f0f1f6; color: var(--text); }
+  .empty { text-align:center; color:var(--muted); padding:50px 10px; grid-column: 1 / -1; }
+  @media (max-width: 560px) {
+    .filters { padding: 8px; }
+    .toolbar button, .toolbar select { padding: 4px 7px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🆓 免费试 PASS 定制面板</h1>
+  <div class="meta" id="meta">加载中…</div>
+  <div class="toolbar">
+    <button id="refreshBtn" onclick="manualRefresh()">↻ 刷新</button>
+    <select id="autoSelect" onchange="changeAuto(this.value)">
+      <option value="15">15 秒</option>
+      <option value="30" selected>30 秒</option>
+      <option value="60">1 分钟</option>
+      <option value="300">5 分钟</option>
+      <option value="0">关闭</option>
+    </select>
+  </div>
+</header>
+<main>
+  <div id="banner" hidden></div>
+  <section class="filters">
+    <div class="filter-row">
+      <input type="text" id="search" placeholder="搜索标题 / 商圈" oninput="saveFilter();render()">
+      <input type="text" id="includeWords" placeholder="标题包含词,逗号分隔" oninput="saveFilter();render()">
+      <input type="text" id="excludeWords" placeholder="标题排除词,逗号分隔" oninput="saveFilter();render()">
+    </div>
+    <div class="filter-row">
+      <span class="quick" onclick="setTypes('default')">全部非美食</span>
+      <span class="quick" onclick="setTypes('all')">全部</span>
+      <span class="quick" onclick="setTypes('beautyfun')">仅变美/玩乐</span>
+      <span class="quick" onclick="setTypes('none')">清空</span>
+    </div>
+    <div class="chips" id="typeChips"></div>
+    <div class="filter-row">
+      <label>最低 PASS 剩余</label>
+      <input type="number" id="minPass" value="1" min="0" oninput="saveFilter();render()" style="width:72px">
+      <label>低余量高亮 ≤</label>
+      <input type="number" id="lowPass" value="5" min="0" oninput="saveFilter();render()" style="width:72px">
+      <select id="sort" onchange="saveFilter();render()">
+        <option value="pass_asc">PASS 剩余少 → 多</option>
+        <option value="pass_desc">PASS 剩余多 → 少</option>
+        <option value="apply_asc">报名人少 → 多</option>
+        <option value="apply_desc">报名人多 →少</option>
+        <option value="hits_desc">关注多 →少</option>
+        <option value="end_asc">截止时间近</option>
+      </select>
+    </div>
+    <div class="toggle-row">
+      <label><input type="checkbox" id="passOnly" checked onchange="saveFilter();render()"> 只看 PASS 可兑</label>
+      <label><input type="checkbox" id="openOnly" checked onchange="saveFilter();render()"> 只看报名中</label>
+      <label><input type="checkbox" id="hideApplied" onchange="saveFilter();render()"> 隐藏已报名</label>
+    </div>
+  </section>
+  <div id="status"></div>
+  <div id="grid"></div>
+</main>
+<script>
+"use strict";
+const LS_FILTERS = 'fm-dashboard-filters-v1';
+const LS_SEEN = 'fm-seen-v1';
+const LS_SEEN_INIT = 'fm-seen-init-v1';
+
+const state = {
+  activities: [],
+  types: [],
+  defaultTypes: [],
+  cityName: '',
+  staticMode: false,
+  filters: loadFilters()
+};
+
+function defaultFilters() {
+  return {
+    types: [],
+    search: '',
+    includeWords: '',
+    excludeWords: '',
+    minPass: 1,
+    lowPass: 5,
+    sort: 'pass_asc',
+    passOnly: true,
+    openOnly: true,
+    hideApplied: false
+  };
+}
+
+function loadFilters() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_FILTERS));
+    if (saved && typeof saved === 'object') return { ...defaultFilters(),...saved };
+  } catch (e) {}
+  return defaultFilters();
+}
+
+function saveFilter() {
+  const f = state.filters;
+ 
+  f.search = document.getElementById('search').value.trim();
+  f.includeWords = document.getElementById('includeWords').value.trim();
+  f.excludeWords = document.getElementById('excludeWords').value.trim();
+  f.minPass = Math.max(0, Number(document.getElementById('minPass').value) || 0);
+  f.lowPass = Math.max(0, Number(document.getElementById('lowPass').value) || 0);
+  f.sort = document.getElementById('sort').value;
+  f.passOnly = document.getElementById('passOnly').checked;
+  f.openOnly = document.getElementById('openOnly').checked;
+  f.hideApplied = document.getElementById('hideApplied').checked;
+  localStorage.setItem(LS_FILTERS, JSON.stringify(f));
+}
+
+function applyFilterInputs() {
+  document.getElementById('search').value = state.filters.search;
+  document.getElementById('includeWords').value = state.filters.includeWords;
+  document.getElementById('excludeWords').value = state.filters.excludeWords;
+  document.getElementById('minPass').value = state.filters.minPass;
+  document.getElementById('lowPass').value = state.filters.lowPass;
+  document.getElementById('sort').value = state.filters.sort;
+  document.getElementById('passOnly').checked = state.filters.passOnly;
+  document.getElementById('openOnly').checked = state.filters.openOnly;
+  document.getElementById('hideApplied').checked = state.filters.hideApplied;
+  renderTypeChips();
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c));
+}
+
+function splitWords(s) {
+  return String(s || '').split(/[,，\s]+/).map(x=>x.trim()).filter(Boolean);
+}
+
+function isOpen(a) {
+  const now = Date.now();
+  return (!a.applyBeginTime || a.applyBeginTime <= now) && (!a.applyEndTime || now <= a.applyEndTime);
+}
+
+function fmtTime(ms) {
+  if (!ms) return '';
+  const d = new Date(ms);
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function renderTypeChips() {
+  const box = document.getElementById('typeChips');
+  const selected = new Set(state.filters.types);
+  const counts = {};
+  for (const a of state.activities) counts[a.type] = (counts[a.type] || 0) + 1;
+  box.innerHTML = state.types.map(t => {
+    const on = selected.has(t.value);
+    const cnt = counts[t.value] || 0;
+    return `<span class="chip ${on?'on':''}" data-type="${t.value}" onclick="toggleType(${t.value})"><span>${esc(t.name)}</span><span class="cnt">${cnt}</span></span>`;
+  }).join('');
+}
+
+function toggleType(type) {
+  const set = new Set(state.filters.types);
+  if (set.has(type)) set.delete(type); else set.add(type);
+  state.filters.types = Array.from(set);
+  saveFilter();
+  renderTypeChips();
+  render();
+}
+
+function setTypes(kind) {
+  switch (kind) {
+    case 'default': state.filters.types = [...state.defaultTypes]; break;
+    case 'all': state.filters.types = state.types.map(t => t.value); break;
+    case 'beautyfun': state.filters.types = [2,3,6]; break;
+    case 'none': state.filters.types = []; break;
+  }
+  saveFilter();
+  renderTypeChips();
+  render();
+}
+
+function filterActivities() {
+  const f = state.filters;
+ 
+  const q = f.search.trim().toLowerCase();
+  const inc = splitWords(f.includeWords);
+  const exc = splitWords(f.excludeWords);
+  const selected = new Set(f.types);
+  let list = state.activities.filter(a => {
+    if (selected.size && !selected.has(a.type)) return false;
+    const title = (a.activityTitle || '').toLowerCase();
+    const region = (a.regionName || '').toLowerCase();
+    if (q && !title.includes(q) && !region.includes(q)) return false;
+    if (inc.length && !inc.some(w => title.includes(w.toLowerCase()))) return false;
+    if (exc.some(w => title.includes(w.toLowerCase()))) return false;
+    if (f.openOnly && !isOpen(a)) return false;
+    if (f.hideApplied && a.applied) return false;
+    if (f.passOnly) {
+      if (!a.passTotalCount || a.passRemainingCount == null) return false;
+      if (a.passRemainingCount < f.minPass) return false;
+    } else if (a.passRemainingCount != null && a.passRemainingCount < f.minPass) {
+
+      return false;
+    }
+    return true;
+  });
+  const sort = f.sort;
+ 
+  const cmp = (x,y) => {
+    if (sort === 'pass_asc') return (x.passRemainingCount ?? 9999) - (y.passRemainingCount ?? 9999);
+    if (sort === 'pass_desc') return (y.passRemainingCount ?? -1) - (x.passRemainingCount ?? -1);
+    if (sort === 'apply_asc') return (x.applyCount ?? 99999) - (y.applyCount ?? 99999);
+    if (sort === 'apply_desc') return (y.applyCount ?? -1) - (x.applyCount ?? -1);
+    if (sort === 'hits_desc') return (y.hits ?? -1) - (x.hits ?? -1);
+    if (sort === 'end_asc') return (x.applyEndTime || 9999999999999) - (y.applyEndTime || 9999999999999);
+    return 0;
+  };
+  return list.sort(cmp);
+}
+
+function card(a) {
+  const pct = a.passTotalCount ? Math.round(a.passRemainingCount / a.passTotalCount * 100) : 0;
+  const urgent = a.passRemainingCount != null && a.passRemainingCount <= state.filters.lowPass;
+ 
+  const openBadge = isOpen(a) ? '报名中' : '已截止';
+  const passText = a.passTotalCount ? `${a.passRemainingCount ?? '-'} / ${a.passTotalCount}` : '无 PASS';
+  const stats = [];
+  if (a.applyCount != null) stats.push(`报名 ${a.applyCount}`);
+  if (a.activityCount != null) stats.push(`名额 ${a.activityCount}`);
+  if (a.applyCount && a.activityCount) stats.push(`中奖 ${Math.round(a.activityCount / a.applyCount * 1000) / 10}%`);
+  if (a.hits != null) stats.push(`关注 ${a.hits}`);
+  if (a.detailError) stats.push(`详情⚠`);
+  const time = a.applyEndTime ? `截止 ${fmtTime(a.applyEndTime)}` : '';
+  return `<article class="card${urgent ? ' urgent' : ''}${a.applied ? ' applied' : ''}">
+    ${a.picUrl ? `<div class="pic"><img loading="lazy" src="${esc(a.picUrl)}" alt="" onerror="this.style.display='none'"></div>` : '<div class="pic"></div>'}
+    <div class="body">
+      <div class="title">${esc(a.activityTitle)}</div>
+      <div class="badges"><span class="badge type">${esc(a.typeName)}</span><span class="badge">${esc(a.regionName || '多商圈')}</span>${a.applied ? '<span class="badge">已报名</span>' : ''}${openBadge === '报名中' ? '' : `<span class="badge">${openBadge}</span>`}</div>
+      <div class="pass-row"><span>PASS</span><b>${passText}</b></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="stats">${stats.join(' · ')}</div>
+      <div class="times">${time || '时间未知'}</div>
+      <div class="actions">
+        <a class="app" href="${esc(a.appDetailUrl)}">App 打开</a>
+        <a class="web" href="${esc(a.detailUrl)}" target="_blank" rel="noopener">网页</a>
+      </div>
+    </div>
+  </article>`;
+}
+
+function render() {
+  const list = filterActivities();
+  document.getElementById('grid').innerHTML = list.length ? list.map(card).join('') : '<div class="empty">没有符合条件的活动</div>';
+  const now = new Date(state.lastFetchedAt || Date.now());
+  const meta = `${state.cityName} · ${state.activities.length} 个活动 · 显示 ${list.length} · 更新 ${fmtTime(now)}`;
+  document.getElementById('meta').textContent = meta;
+  const status = [];
+  if (state.lastError) status.push(`上次刷新错误: ${state.lastError}`);
+  if (state.lastDurationMs) status.push(`本次刷新 ${(state.lastDurationMs/1000).toFixed(1)}s`);
+  document.getElementById('status').textContent = status.join(' · ');
+  }
+
+async function loadData(force = false) {
+  const start = Date.now();
+  try {
+    let data;
+if (state.staticMode) {
+  const sres = await fetch('data.json?t=' + Date.now());
+  if (!sres.ok) throw new Error('HTTP ' + sres.status + ' data.json');
+  data = await sres.json();
+} else {
+  const url = force ? '/api/activities?force=1' : '/api/activities';
+  const res = await fetch(url);
+  if (!res.ok) {
+    state.staticMode = true;
+    const sres = await fetch('data.json?t=' + Date.now());
+    if (!sres.ok) throw new Error('HTTP ' + sres.status + ' data.json');
+    data = await sres.json();
+  } else {
+    data = await res.json();
+  }
+}
+    if (data.error) throw new Error(data.error);
+    const first = !state.activities.length && !state.filters.types.length; 
+    state.activities = data.activities || [];
+    state.types = data.types || [];
+    state.defaultTypes = data.defaultTypes || [];
+    state.cityName = data.cityName || '';
+    state.lastFetchedAt = data.fetchedAt;
+    state.lastError = data.lastError || null;
+    state.lastDurationMs = Date.now() - start;
+    if (first || !state.filters.types.length) {
+      state.filters.types = [...(state.filters.types.length ? state.filters.types : data.defaultTypes)];
+    }
+    detectNew(state.activities);
+    applyFilterInputs();
+    render();
+  } catch (err) {
+    state.lastError = err.message;
+    render();
+  }
+}
+
+function manualRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.textContent = '刷新中…';
+  loadData(true).finally(() => {
+    btn.disabled = false;
+    btn.textContent = '↻ 刷新';
+  });
+}
+
+function changeAuto(sec) {
+  const v = Number(sec || 0);
+  if (state.timer) clearInterval(state.timer);
+  if (v > 0) state.timer = setInterval(() => loadData(false), v * 1000);
+  localStorage.setItem('fm-auto', String(v));
+}
+
+function initAuto() {
+  let v = Number(localStorage.getItem('fm-auto') || 30);
+  if (![15,30,60,300,0].includes(v)) v =  30;
+  document.getElementById('autoSelect').value = String(v);
+  changeAuto(v);
+}
+
+function detectNew(list) {
+  if (!localStorage.getItem(LS_SEEN_INIT)) {
+    localStorage.setItem(LS_SEEN_INIT,'1');
+    localStorage.setItem(LS_SEEN, JSON.stringify(list.map(a => a.offlineActivityId)));
+    return;
+  }
+  const prev = new Set(JSON.parse(localStorage.getItem(LS_SEEN) || '[]'));
+  const cur = list.map(a => a.offlineActivityId);
+  const allowed = new Set(state.filters.types);
+  const fresh = list.filter(a => !prev.has(a.offlineActivityId) && (!allowed.size || allowed.has(a.type)));
+  if (fresh.length) {
+    const el = document.getElementById('banner');
+    el.hidden = false;
+    el.textContent = '✨ 新出现 ' + fresh.length + ' 个可兑活动（' + fresh.slice(0, 5).map(f => f.activityTitle).join('、') + '）';
+    beep();
+    setTimeout(() => { el.hidden = true; }, 8000);
+  }
+  localStorage.setItem(LS_SEEN, JSON.stringify(cur));
+}
+
+function beep() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.value = 0.15;
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
+  } catch (e) {}
+}
+
+initAuto();
+loadData(false);
+</script>
+</body>
+</html>
+
+
+
+

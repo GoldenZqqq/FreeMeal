@@ -4,8 +4,8 @@ import { resolve } from 'node:path';
 import { splitList, toNumber } from './utils.js';
 
 const DEFAULT_CONFIG_PATH = 'config/local.json';
-const DEFAULT_CITY_ID = '14';
-const DEFAULT_CITY_NAME = '福州';
+const DEFAULT_CITY_ID = '1';
+const DEFAULT_CITY_NAME = '上海';
 
 export async function loadConfig(argv = process.argv.slice(2), env = process.env) {
   const cli = parseArgs(argv);

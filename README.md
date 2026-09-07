@@ -19,7 +19,7 @@
 
 可选：
 
-- `DIANPING_CITY_ID`: 城市 ID，默认福州 `14`
+- `DIANPING_CITY_ID`: 城市 ID，默认上海 `1`
 - `DIANPING_CITY_NAME`: 城市名称，通知中展示
 - `DIANPING_COOKIE`: 登录后的大众点评 Cookie，可选；用于访问详情页时带上账号态
 - `BARK`: Bark device key 或 `https://api.day.app/<device-key>`；不要提交到仓库
@@ -78,7 +78,7 @@ journalctl -u freemeal-pass.service -n 100 --no-pager
 
 - `BARK`
 
-脚本默认使用福州：`DIANPING_CITY_ID=14`、`DIANPING_CITY_NAME=福州`，一般不用在 Arcadia 里额外配置城市。
+脚本默认使用上海：`DIANPING_CITY_ID=1`、`DIANPING_CITY_NAME=上海`，一般不用在 Arcadia 里额外配置城市。
 
 运行命令：
 

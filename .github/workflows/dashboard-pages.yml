@@ -1,0 +1,48 @@
+name: Dashboard Pages
+
+on:
+  push:
+    branches: [master, main]
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Refresh Dianping data
+        run: node dashboard/update-data.mjs
+        env:
+          DIANPING_CITY_ID: '1'
+          DIANPING_CITY_NAME: 上海
+          DIANPING_COOKIE: ${{ secrets.DIANPING_COOKIE }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard/public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
