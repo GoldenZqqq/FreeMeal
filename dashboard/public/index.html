@@ -136,6 +136,8 @@
   .badge.type { background:#fff0ea; color: var(--accent); }
   .pass-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
   .pass-row b { color: var(--accent); font-size: 15px; }
+  .price-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+  .price-row b { color: #e8432f; font-size: 16px; }
   .bar { height: 6px; background: #eef0f6; border-radius: 999px; overflow:hidden; }
   .bar i { display:block; height:100%; background: linear-gradient(90deg,#ff9a3c,#ff6633); border-radius: 999px; }
   .stats { font-size: 12px; color: var(--muted); line-height: 1.5; }
@@ -200,6 +202,8 @@
         <option value="apply_desc">报名人多 →少</option>
         <option value="hits_desc">关注多 →少</option>
         <option value="end_asc">截止时间近</option>
+        <option value="cost_desc">价值高 → 低</option>
+        <option value="cost_asc">价值低 → 高</option>
       </select>
     </div>
     <div class="toggle-row">
@@ -364,6 +368,8 @@ function filterActivities() {
     if (sort === 'apply_desc') return (y.applyCount ?? -1) - (x.applyCount ?? -1);
     if (sort === 'hits_desc') return (y.hits ?? -1) - (x.hits ?? -1);
     if (sort === 'end_asc') return (x.applyEndTime || 9999999999999) - (y.applyEndTime || 9999999999999);
+    if (sort === 'cost_desc') return (y.cost ?? 0) - (x.cost ?? 0);
+    if (sort === 'cost_asc') return (x.cost ?? 0) - (y.cost ?? 0);
     return 0;
   };
   return list.sort(cmp);
@@ -382,11 +388,13 @@ function card(a) {
   if (a.hits != null) stats.push(`关注 ${a.hits}`);
   if (a.detailError) stats.push(`详情⚠`);
   const time = a.applyEndTime ? `截止 ${fmtTime(a.applyEndTime)}` : '';
+  const priceText = a.cost != null && a.cost > 0 ? `¥${Number(a.cost).toLocaleString('zh-CN')}` : (a.cost === 0 ? '免费' : '');
   return `<article class="card${urgent ? ' urgent' : ''}${a.applied ? ' applied' : ''}">
     ${a.picUrl ? `<div class="pic"><img loading="lazy" src="${esc(a.picUrl)}" alt="" onerror="this.style.display='none'"></div>` : '<div class="pic"></div>'}
     <div class="body">
       <div class="title">${esc(a.activityTitle)}</div>
       <div class="badges"><span class="badge type">${esc(a.typeName)}</span><span class="badge">${esc(a.regionName || '多商圈')}</span>${a.applied ? '<span class="badge">已报名</span>' : ''}${openBadge === '报名中' ? '' : `<span class="badge">${openBadge}</span>`}</div>
+      ${priceText ? `<div class="price-row"><span>价值</span><b>${esc(priceText)}</b></div>` : ''}
       <div class="pass-row"><span>PASS</span><b>${passText}</b></div>
       <div class="bar"><i style="width:${pct}%"></i></div>
       <div class="stats">${stats.join(' · ')}</div>
