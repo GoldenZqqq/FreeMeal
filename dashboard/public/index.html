@@ -195,8 +195,10 @@
       <input type="number" id="minPass" value="1" min="0" oninput="saveFilter();render()" style="width:72px">
       <label>低余量高亮 ≤</label>
       <input type="number" id="lowPass" value="5" min="0" oninput="saveFilter();render()" style="width:72px">
-      <label>价值 ≤</label>
-      <input type="number" id="maxCost" placeholder="不限" min="0" oninput="saveFilter();render()" style="width:72px">
+      <label>价值区间</label>
+      <input type="number" id="minCost" placeholder="最低" min="0" oninput="saveFilter();render()" style="width:72px">
+      <span>—</span>
+      <input type="number" id="maxCost" placeholder="最高" min="0" oninput="saveFilter();render()" style="width:72px">
       <select id="sort" onchange="saveFilter();render()">
         <option value="new_asc">最新上架</option>
         <option value="pass_asc">PASS 剩余少 → 多</option>
@@ -241,6 +243,7 @@ function defaultFilters() {
     excludeWords: '',
     minPass: 1,
     lowPass: 5,
+    minCost: '',
     maxCost: '',
     sort: 'pass_asc',
     passOnly: true,
@@ -265,6 +268,7 @@ function saveFilter() {
   f.excludeWords = document.getElementById('excludeWords').value.trim();
   f.minPass = Math.max(0, Number(document.getElementById('minPass').value) || 0);
   f.lowPass = Math.max(0, Number(document.getElementById('lowPass').value) || 0);
+  f.minCost = Number(document.getElementById('minCost').value) > 0 ? Number(document.getElementById('minCost').value) : '';
   f.maxCost = Number(document.getElementById('maxCost').value) > 0 ? Number(document.getElementById('maxCost').value) : '';
   f.sort = document.getElementById('sort').value;
   f.passOnly = document.getElementById('passOnly').checked;
@@ -279,6 +283,7 @@ function applyFilterInputs() {
   document.getElementById('excludeWords').value = state.filters.excludeWords;
   document.getElementById('minPass').value = state.filters.minPass;
   document.getElementById('lowPass').value = state.filters.lowPass;
+  document.getElementById('minCost').value = state.filters.minCost;
   document.getElementById('maxCost').value = state.filters.maxCost;
   document.getElementById('sort').value = state.filters.sort;
   document.getElementById('passOnly').checked = state.filters.passOnly;
@@ -354,6 +359,7 @@ function filterActivities() {
     if (q && !title.includes(q) && !region.includes(q)) return false;
     if (inc.length && !inc.some(w => title.includes(w.toLowerCase()))) return false;
     if (exc.some(w => title.includes(w.toLowerCase()))) return false;
+    if (f.minCost > 0 && (a.cost == null || a.cost < f.minCost)) return false;
     if (f.maxCost > 0 && (a.cost == null || a.cost > f.maxCost)) return false;
     if (f.openOnly && !isOpen(a)) return false;
     if (f.hideApplied && a.applied) return false;
